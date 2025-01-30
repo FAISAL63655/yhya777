@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Users, Activity, Edit, Trash2, Gamepad2, Dices, PlusCircle } from 'lucide-react';
+import { Trophy, Users, Activity, Edit, Trash2, Gamepad2, Dices, PlusCircle, Target } from 'lucide-react';
 import { Game } from '../types';
 
 interface GameCardProps {
@@ -9,19 +9,36 @@ interface GameCardProps {
   onDelete: () => void;
 }
 
+function getGameIcon(type: string) {
+  switch (type) {
+    case 'FOOTBALL':
+      return <Trophy className="w-6 h-6 text-green-500" />;
+    case 'VOLLEYBALL':
+      return <Activity className="w-6 h-6 text-blue-500" />;
+    case 'BALOOT':
+      return <Dices className="w-6 h-6 text-orange-500" />;
+    case 'CARROM':
+      return <Dices className="w-6 h-6 text-orange-500" />;
+    case 'PLAYSTATION':
+      return <Gamepad2 className="w-6 h-6 text-indigo-500" />;
+    case 'JACKAROO':
+      return <Target className="w-6 h-6 text-pink-500" />;
+    case 'DARTS':
+      return <Target className="w-6 h-6 text-red-500" />;
+    case 'CUSTOM':
+      return <Users className="w-6 h-6 text-gray-500" />;
+    default:
+      return <Activity className="w-6 h-6" />;
+  }
+}
+
 export function GameCard({ game, onSelect, onEdit, onDelete }: GameCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-800">{game.name}</h3>
         <div className="flex items-center gap-2">
-          {game.type === 'FOOTBALL' && <Trophy className="w-6 h-6 text-green-500" />}
-          {game.type === 'VOLLEYBALL' && <Activity className="w-6 h-6 text-blue-500" />}
-          {game.type === 'BALOOT' && <Users className="w-6 h-6 text-purple-500" />}
-          {game.type === 'CARROM' && <Dices className="w-6 h-6 text-orange-500" />}
-          {game.type === 'PLAYSTATION' && <Gamepad2 className="w-6 h-6 text-indigo-500" />}
-          {game.type === 'JACKAROO' && <Users className="w-6 h-6 text-pink-500" />}
-          {game.type === 'CUSTOM' && <Users className="w-6 h-6 text-gray-500" />}
+          {getGameIcon(game.type)}
         </div>
       </div>
       

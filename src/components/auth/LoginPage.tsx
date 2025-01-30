@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
 import { login } from '../../services/authService';
+import { UserRole, GameType } from '../../types';
 
 export const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -23,6 +24,7 @@ export const LoginPage: React.FC = () => {
             localStorage.setItem('isAuthenticated', 'true');
             localStorage.setItem('userId', user.id.toString());
             localStorage.setItem('userRole', user.role);
+            localStorage.setItem('userName', user.name);
             if (user.gameType) {
                 localStorage.setItem('userGameType', user.gameType);
             }

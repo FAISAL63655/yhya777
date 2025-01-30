@@ -85,23 +85,23 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
       const playersInLevel = [...level];
 
       while (playersInLevel.length > 0) {
-        // اختيار أفضل لاعب متاح للفريق الحالي
+        const team = teams[currentTeamIndex];
+        
+        // تخطي الفرق المكتملة
+        if (team.players.length >= playersPerTeam) {
+          currentTeamIndex = (currentTeamIndex + 1) % teams.length;
+          continue;
+        }
+
+        // البحث عن أفضل لاعب متاح للفريق الحالي
         let bestPlayerIndex = -1;
         let bestBalanceScore = -Infinity;
+        let bestFallbackIndex = -1; // مؤشر احتياطي لأفضل لاعب متاح بغض النظر عن الزملاء السابقين
 
         for (let i = 0; i < playersInLevel.length; i++) {
           const player = playersInLevel[i];
-          const team = teams[currentTeamIndex];
 
-          // تخطي إذا كان الفريق ممتلئ
-          if (team.players.length >= playersPerTeam) continue;
-
-          // تخطي إذا كان اللاعب له زملاء سابقين في الفريق
-          if (round > 1 && team.players.some(p => getPreviousTeammates(player.id).includes(p.id))) {
-            continue;
-          }
-
-          // حساب درجة التوازن إذا تم إضافة هذا اللاعب
+          // حساب درجة التوازن
           const currentTeamStrength = calculateTeamStrength(team.players, game.type);
           const playerRating = player.ratings[game.type] || 0;
           const newAverage = (currentTeamStrength + playerRating) / (team.players.length + 1);
@@ -120,28 +120,35 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
           // كلما كان الفرق بين متوسط الفريق والمتوسط العام أقل، كان أفضل
           const balanceScore = -Math.abs(newAverage - globalAverage);
 
-          if (balanceScore > bestBalanceScore) {
+          // تحديث أفضل لاعب احتياطي
+          if (bestFallbackIndex === -1 || balanceScore > bestBalanceScore) {
+            bestFallbackIndex = i;
+          }
+
+          // التحقق من الزملاء السابقين فقط في الجولة الثانية
+          if (round > 1) {
+            const hasPreviousTeammates = team.players.some(p => 
+              getPreviousTeammates(player.id).includes(p.id)
+            );
+            
+            if (!hasPreviousTeammates && balanceScore > bestBalanceScore) {
+              bestBalanceScore = balanceScore;
+              bestPlayerIndex = i;
+            }
+          } else if (balanceScore > bestBalanceScore) {
             bestBalanceScore = balanceScore;
             bestPlayerIndex = i;
           }
         }
 
-        // إذا لم نجد لاعباً مناسباً، نختار أول لاعب متاح
+        // إذا لم نجد لاعباً مناسباً، نستخدم اللاعب الاحتياطي
         if (bestPlayerIndex === -1) {
-          for (let i = 0; i < playersInLevel.length; i++) {
-            const player = playersInLevel[i];
-            const team = teams[currentTeamIndex];
-            if (team.players.length < playersPerTeam) {
-              bestPlayerIndex = i;
-              break;
-            }
-          }
+          bestPlayerIndex = bestFallbackIndex;
         }
 
         // إضافة اللاعب المختار للفريق
         if (bestPlayerIndex !== -1) {
           const player = playersInLevel[bestPlayerIndex];
-          const team = teams[currentTeamIndex];
           team.players.push(player);
           team.playerStats.push({
             playerId: player.id,
@@ -157,6 +164,26 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
       }
     }
 
+    // التحقق من اكتمال الفرق
+    const incompleteTeams = teams.filter(team => team.players.length < playersPerTeam);
+    if (incompleteTeams.length > 0) {
+      // إعادة توزيع اللاعبين من الفرق الزائدة إلى الفرق غير المكتملة
+      const extraTeams = teams.filter(team => team.players.length > playersPerTeam);
+      for (const team of incompleteTeams) {
+        while (team.players.length < playersPerTeam && extraTeams.length > 0) {
+          const sourceTeam = extraTeams[0];
+          if (sourceTeam.players.length > playersPerTeam) {
+            const player = sourceTeam.players.pop()!;
+            const playerStat = sourceTeam.playerStats.pop()!;
+            team.players.push(player);
+            team.playerStats.push(playerStat);
+          } else {
+            extraTeams.shift();
+          }
+        }
+      }
+    }
+
     // ترتيب الفرق حسب قوتها
     const sortedTeams = [...teams].sort((a, b) => {
       const strengthA = calculateTeamStrength(a.players, game.type) / a.players.length;
@@ -167,12 +194,9 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
     // إنشاء المواجهات المتكافئة
     const balancedTeams: Team[] = [];
     for (let i = 0; i < sortedTeams.length; i += 2) {
-      // إضافة فريق من النصف الأول
       balancedTeams.push(sortedTeams[i]);
-      // إضافة فريق مقابل من النصف الثاني
       if (i + 1 < sortedTeams.length) {
-        const matchingTeamIndex = Math.floor(sortedTeams.length / 2) + Math.floor(i / 2);
-        balancedTeams.push(sortedTeams[matchingTeamIndex]);
+        balancedTeams.push(sortedTeams[i + 1]);
       }
     }
 
@@ -192,15 +216,11 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
 
     // تحديد الجولة
     const existingMatches = matches.filter(m => m.gameId === game.id);
-    const round = existingMatches.length === 0 ? 1 : 2;
-
-    if (round > 2) {
-      alert('تم اكتمال الجولتين بالفعل');
-      return;
-    }
+    const maxRound = existingMatches.length > 0 ? Math.max(...existingMatches.map(m => m.round)) : 0;
+    const round = maxRound + 1;  
 
     // إنشاء الفرق المتكافئة
-    const balancedTeams = createBalancedTeams(qualifiedPlayers, round, round === 2 ? existingMatches : []);
+    const balancedTeams = createBalancedTeams(qualifiedPlayers, round, existingMatches);
 
     // تقسيم الفرق إلى مواجهات متكافئة
     const proposedMatchList: Array<{teams: Team[]}> = [];
@@ -237,7 +257,8 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
   // دالة لاعتماد المواجهات المقترحة
   const confirmMatches = () => {
     const existingMatches = matches.filter(m => m.gameId === game.id);
-    const round = existingMatches.length === 0 ? 1 : 2;
+    const maxRound = existingMatches.length > 0 ? Math.max(...existingMatches.map(m => m.round)) : 0;
+    const round = maxRound + 1;  
 
     // إنشاء مصفوفة من المباريات الجديدة
     const newMatches = proposedMatches.map(match => ({
@@ -332,31 +353,20 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
     return Math.round(totalRating / team.players.length * 10) / 10;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateTeams()) {
-      return;
-    }
+  const [selectedTeam1, setSelectedTeam1] = useState<Team | null>(null);
+  const [selectedTeam2, setSelectedTeam2] = useState<Team | null>(null);
+  const [team1Score, setTeam1Score] = useState<number>(0);
+  const [team2Score, setTeam2Score] = useState<number>(0);
 
-    // تحديد رقم الجولة بناءً على المباريات السابقة
-    const existingMatches = matches.filter(m => m.gameId === game.id);
-    const round = existingMatches.length < 2 ? 1 : 2;
-
-    // التحقق من عدم تجاوز عدد المباريات في الجولة
-    const matchesInRound = existingMatches.filter(m => m.round === round);
-    if (matchesInRound.length >= 2) {
-      alert(`عذراً، الجولة ${round} مكتملة بالفعل. لا يمكن إضافة مباريات أخرى.`);
-      return;
-    }
-
-    const matchData: Omit<Match, 'id'> = {
+  const handleSubmit = () => {
+    const matchData: Omit<Match, 'id' | 'createdAt' | 'updatedAt'> = {
       gameId: game.id,
-      date,
-      createdAt: new Date().toISOString(),
-      teams,
+      teams: teams,
       status: 'PENDING',
-      round
+      round: 1,
+      date: date
     };
+
     onSubmit(matchData);
   };
 

@@ -83,6 +83,7 @@ export function GameForm({ game, onSubmit, onClose }: GameFormProps) {
               <option value="CARROM">الكيرم</option>
               <option value="PLAYSTATION">البلايستيشن</option>
               <option value="JACKAROO">الجاكارو</option>
+              <option value="DARTS">رماية الأسهم</option>
               <option value="CUSTOM">لعبة مخصصة</option>
             </select>
           </div>
