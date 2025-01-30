@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Game, PlayerCategory } from '../types';
+import { Game, PlayerCategory, GameType } from '../types';
 import { X } from 'lucide-react';
 
 interface GameFormProps {
@@ -10,7 +10,7 @@ interface GameFormProps {
 
 export function GameForm({ game, onSubmit, onClose }: GameFormProps) {
   const [name, setName] = useState(game?.name || '');
-  const [type, setType] = useState(game?.type || 'CUSTOM');
+  const [type, setType] = useState<GameType>(game?.type || GameType.CUSTOM);
   const [playersPerTeam, setPlayersPerTeam] = useState(game?.playersPerTeam || 2);
   const [maxTeams, setMaxTeams] = useState(game?.maxTeams || 2);
   const [hasCategories, setHasCategories] = useState(!!game?.categoryRequirements);
@@ -51,123 +51,105 @@ export function GameForm({ game, onSubmit, onClose }: GameFormProps) {
             <X className="w-6 h-6" />
           </button>
         </div>
-        
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               اسم اللعبة
             </label>
             <input
               type="text"
-              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border rounded-md"
               required
             />
           </div>
-          
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               نوع اللعبة
             </label>
             <select
-              id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as Game['type'])}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => setType(e.target.value as GameType)}
+              className="w-full p-2 border rounded-md"
+              required
             >
-              <option value="FOOTBALL">كرة القدم</option>
-              <option value="VOLLEYBALL">الكرة الطائرة</option>
-              <option value="BALOOT">البلوت</option>
-              <option value="CARROM">الكيرم</option>
-              <option value="PLAYSTATION">البلايستيشن</option>
-              <option value="JACKAROO">الجاكارو</option>
-              <option value="DARTS">رماية الأسهم</option>
-              <option value="CUSTOM">لعبة مخصصة</option>
+              {Object.values(GameType).map((gameType) => (
+                <option key={gameType} value={gameType}>
+                  {gameType}
+                </option>
+              ))}
             </select>
           </div>
-
           <div>
-            <label htmlFor="playersPerTeam" className="block text-sm font-medium text-gray-700 mb-1">
-              عدد اللاعبين في كل فريق
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              عدد اللاعبين في الفريق
             </label>
             <input
               type="number"
-              id="playersPerTeam"
               min="1"
               value={playersPerTeam}
               onChange={(e) => setPlayersPerTeam(Number(e.target.value))}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border rounded-md"
               required
             />
           </div>
-
           <div>
-            <label htmlFor="maxTeams" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               عدد الفرق
             </label>
             <input
               type="number"
-              id="maxTeams"
               min="2"
               value={maxTeams}
               onChange={(e) => setMaxTeams(Number(e.target.value))}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border rounded-md"
               required
             />
           </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="hasCategories"
-                checked={hasCategories}
-                onChange={(e) => setHasCategories(e.target.checked)}
-                className="rounded text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="hasCategories" className="text-sm font-medium text-gray-700">
-                تفعيل متطلبات الفئات
-              </label>
-            </div>
-
-            {hasCategories && (
-              <div className="space-y-2 mt-2">
-                <p className="text-sm font-medium text-gray-700">متطلبات الفئات:</p>
-                {(['A', 'B', 'C', 'D'] as PlayerCategory[]).map((category) => (
-                  <div key={category} className="flex items-center gap-2">
-                    <label htmlFor={`category-${category}`} className="text-sm text-gray-600 w-20">
-                      الفئة {category}:
-                    </label>
-                    <input
-                      type="number"
-                      id={`category-${category}`}
-                      min="0"
-                      value={categoryRequirements[category] || 0}
-                      onChange={(e) => handleCategoryChange(category, Number(e.target.value))}
-                      className="w-20 px-3 py-1 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <span className="text-sm text-gray-500">لاعب</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="hasCategories"
+              checked={hasCategories}
+              onChange={(e) => setHasCategories(e.target.checked)}
+              className="rounded text-blue-600"
+            />
+            <label htmlFor="hasCategories" className="text-sm font-medium text-gray-700">
+              تفعيل متطلبات الفئات
+            </label>
           </div>
-          
-          <div className="flex justify-end gap-3 mt-6">
+          {hasCategories && (
+            <div className="space-y-2">
+              {Object.values(PlayerCategory).map((category) => (
+                <div key={category} className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 flex-1">
+                    {category}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={categoryRequirements[category] || 0}
+                    onChange={(e) => handleCategoryChange(category, Number(e.target.value))}
+                    className="w-20 p-2 border rounded-md"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
             >
-              {game ? 'حفظ التغييرات' : 'إضافة اللعبة'}
+              {game ? 'تحديث' : 'إضافة'}
             </button>
           </div>
         </form>

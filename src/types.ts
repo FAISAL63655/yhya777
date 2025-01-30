@@ -15,6 +15,12 @@ export enum UserRole {
   USER = 'USER'
 }
 
+export enum PlayerCategory {
+  BEGINNER = 'BEGINNER',
+  INTERMEDIATE = 'INTERMEDIATE',
+  ADVANCED = 'ADVANCED'
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -33,6 +39,9 @@ export interface Game {
   type: GameType;
   playersPerTeam: number;
   maxTeams: number;
+  categoryRequirements?: {
+    [key in PlayerCategory]?: number;
+  };
 }
 
 export interface PlayerMatchStats {
@@ -58,6 +67,16 @@ export interface Match {
   status: 'PENDING' | 'COMPLETED';
   round: number;
   date: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  role: UserRole;
+  gameType?: GameType;
   createdAt: string;
   updatedAt: string;
 }

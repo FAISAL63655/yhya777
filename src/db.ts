@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { Player, Game, Match } from './types';
+import { Player, Game, Match, GameType } from './types';
 
 export class SportsDB extends Dexie {
   players!: Table<Player, string>;
@@ -9,8 +9,8 @@ export class SportsDB extends Dexie {
   constructor() {
     super('SportsDatabase');
     this.version(2).stores({
-      players: 'id, name',
-      games: 'id, name, type',
+      players: 'id, name, phone, createdAt, updatedAt',
+      games: 'id, name, type, playersPerTeam, maxTeams',
       matches: 'id, gameId, date, status'
     });
   }
@@ -61,13 +61,15 @@ function randomNumber(min: number, max: number): number {
 }
 
 // دالة لتوليد لاعب عشوائي
-function generateRandomPlayer() {
+function generateRandomPlayer(): Player {
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const now = new Date().toISOString();
   
   return {
     id: crypto.randomUUID(),
     name: `${firstName} ${lastName}`,
+    phone: `05${Math.floor(Math.random() * 100000000)}`,
     ratings: {
       FOOTBALL: randomNumber(5, 10),
       VOLLEYBALL: randomNumber(5, 10),
@@ -75,7 +77,9 @@ function generateRandomPlayer() {
       CARROM: randomNumber(5, 10),
       PLAYSTATION: randomNumber(5, 10),
       JACKAROO: randomNumber(5, 10)
-    }
+    },
+    createdAt: now,
+    updatedAt: now
   };
 }
 
@@ -104,13 +108,13 @@ async function initializeDefaultData() {
 
     // إضافة الألعاب الافتراضية فقط إذا لم تكن موجودة
     if (existingGames === 0) {
-      const defaultGames = [
-        { id: '1', name: 'كرة القدم', type: 'FOOTBALL', playersPerTeam: 11, maxTeams: 2 },
-        { id: '2', name: 'كرة الطائرة', type: 'VOLLEYBALL', playersPerTeam: 6, maxTeams: 2 },
-        { id: '3', name: 'البلوت', type: 'BALOOT', playersPerTeam: 2, maxTeams: 2 },
-        { id: '4', name: 'الكيرم', type: 'CARROM', playersPerTeam: 1, maxTeams: 2 },
-        { id: '5', name: 'بلايستيشن', type: 'PLAYSTATION', playersPerTeam: 1, maxTeams: 2 },
-        { id: '6', name: 'جكارو', type: 'JACKAROO', playersPerTeam: 1, maxTeams: 2 }
+      const defaultGames: Game[] = [
+        { id: '1', name: 'كرة القدم', type: GameType.FOOTBALL, playersPerTeam: 11, maxTeams: 2 },
+        { id: '2', name: 'كرة الطائرة', type: GameType.VOLLEYBALL, playersPerTeam: 6, maxTeams: 2 },
+        { id: '3', name: 'البلوت', type: GameType.BALOOT, playersPerTeam: 2, maxTeams: 2 },
+        { id: '4', name: 'الكيرم', type: GameType.CARROM, playersPerTeam: 1, maxTeams: 2 },
+        { id: '5', name: 'بلايستيشن', type: GameType.PLAYSTATION, playersPerTeam: 1, maxTeams: 2 },
+        { id: '6', name: 'جكارو', type: GameType.JACKAROO, playersPerTeam: 1, maxTeams: 2 }
       ];
       await db.games.bulkAdd(defaultGames);
       console.log('تم إضافة الألعاب الافتراضية');

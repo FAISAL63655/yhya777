@@ -38,8 +38,9 @@ export function PlayerForm({ games, player, onSubmit, onCancel }: PlayerFormProp
       name,
       ratings,
       image,
-      createdAt: player?.createdAt || new Date(),
-      updatedAt: new Date()
+      phone: player?.phone || '',
+      createdAt: player?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     });
   };
 

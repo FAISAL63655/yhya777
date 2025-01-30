@@ -1,3 +1,4 @@
+import { Player, Game } from '../types';
 import { db } from '../db';
 
 export const DataService = {
@@ -10,11 +11,11 @@ export const DataService = {
     return db.players.toArray();
   },
 
-  async updatePlayer(id: number, updates: Partial<Player>) {
+  async updatePlayer(id: string, updates: Partial<Player>) {
     return db.players.update(id, updates);
   },
 
-  async deletePlayer(id: number) {
+  async deletePlayer(id: string) {
     return db.players.delete(id);
   },
 
@@ -27,13 +28,11 @@ export const DataService = {
     return db.games.toArray();
   },
 
-  async updateGame(id: number, updates: Partial<Game>) {
+  async updateGame(id: string, updates: Partial<Game>) {
     return db.games.update(id, updates);
   },
 
-  async deleteGame(id: number) {
+  async deleteGame(id: string) {
     return db.games.delete(id);
   }
 };
-
-import { Player, Game } from '../types';

@@ -1,45 +1,5 @@
 import Dexie, { Table } from 'dexie';
-
-export interface Player {
-  id?: string;
-  name: string;
-  image?: string;
-  ratings: { [key: string]: number };
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export interface Game {
-  id: string;
-  name: string;
-  type: string;
-  playersPerTeam: number;
-  maxTeams: number;
-}
-
-export interface Match {
-  id?: string;
-  date: string;
-  gameId: string;
-  round: number;
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
-  teams: {
-    id: string;
-    name: string;
-    score: number;
-    players: { id: string; name: string }[];
-    playerStats: {
-      playerId: string;
-      goals: number;
-      yellowCards: number;
-      redCard: boolean;
-      penaltyPoints: number;
-      points: number;
-      matchPoints: number;
-    }[];
-  }[];
-  createdAt?: string;
-}
+import { Player, Game, Match } from '../types';
 
 class AppDB extends Dexie {
   players!: Table<Player>;
@@ -56,15 +16,14 @@ class AppDB extends Dexie {
     });
 
     // إضافة hooks لتحديث التواريخ تلقائياً
-    this.players.hook('creating', (primKey, obj) => {
-      obj.createdAt = new Date();
-      obj.updatedAt = new Date();
+    this.players.hook('creating', (primKey, obj: Player) => {
+      const now = new Date().toISOString();
+      obj.createdAt = now;
+      obj.updatedAt = now;
     });
 
-    this.players.hook('updating', (modifications, primKey, obj) => {
-      if (typeof modifications === 'object') {
-        modifications.updatedAt = new Date();
-      }
+    this.players.hook('updating', (modifications: Partial<Player>) => {
+      modifications.updatedAt = new Date().toISOString();
     });
   }
 }

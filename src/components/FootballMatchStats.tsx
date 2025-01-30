@@ -25,7 +25,7 @@ export const FootballMatchStats: React.FC<FootballMatchStatsProps> = ({
                   <input
                     type="number"
                     min="0"
-                    value={team.playerStats[playerIndex]?.goals || 0}
+                    value={(team.playerStats && team.playerStats[playerIndex]?.goals) || 0}
                     onChange={(e) =>
                       onUpdateStats(teamIndex, playerIndex, parseInt(e.target.value) || 0)
                     }
