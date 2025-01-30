@@ -63,6 +63,14 @@ export function LivePlayerRanking({ players, matches, games, selectedGame, isFul
 
           const playerStats = playerTeam.playerStats?.find(ps => ps.playerId === player.id);
           if (playerStats) {
+            // نقاط الأهداف في كرة القدم
+            const game = games.find(g => g.id === match.gameId);
+            if (game?.type === 'FOOTBALL' && playerStats.goals && playerStats.goals > 0) {
+              const goalsPoints = 2 * playerStats.goals;
+              points += goalsPoints; // +2 لكل هدف
+              console.log(`Adding ${goalsPoints} points for ${playerStats.goals} goals to ${player.name}`);
+            }
+
             if (playerStats.yellowCards > 0) {
               yellowCards += playerStats.yellowCards;
               points -= (playerStats.yellowCards * 3);
