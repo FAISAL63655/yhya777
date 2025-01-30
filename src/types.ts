@@ -19,6 +19,7 @@ export interface Player {
   id: string;
   name: string;
   phone: string;
+  image?: string;
   ratings: {
     [key in GameType]?: number;
   };

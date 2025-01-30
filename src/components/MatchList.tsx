@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Match, Game, Player, PlayerStats } from '../types';
+import { Match, Game, Player, PlayerMatchStats } from '../types';
 import { Calendar, Users, Trophy, Trash2, Save, Edit, X, Clock, Play, CheckCircle } from 'lucide-react';
 
 interface MatchListProps {
@@ -39,16 +39,16 @@ export function MatchList({ matches, games, players, onUpdateMatch, onDeleteMatc
   const handlePlayerStats = (match: Match, teamIndex: number, playerId: string, statType: 'goals' | 'yellowCards' | 'redCard', increment: boolean = true) => {
     const updatedMatch = { ...match };
     const team = updatedMatch.teams[teamIndex];
-    const playerStats = team.playerStats.find(ps => ps.playerId === playerId) || {
+    if (!team.playerStats) {
+      team.playerStats = [];
+    }
+    const playerStats: PlayerMatchStats = (team.playerStats?.find(ps => ps.playerId === playerId) || {
       playerId,
       goals: 0,
+      assists: 0,
       yellowCards: 0,
-      redCard: false,
-      penaltyPoints: 0,
-      points: 0,
-      matchPoints: 0,
-      totalPoints: 0
-    };
+      redCard: false
+    }) as PlayerMatchStats;
 
     if (statType === 'goals') {
       playerStats.goals = increment 
@@ -112,7 +112,7 @@ export function MatchList({ matches, games, players, onUpdateMatch, onDeleteMatc
   };
 
   const handleToggleMatchStatus = (match: Match) => {
-    const updatedMatch = {
+    const updatedMatch: Match = {
       ...match,
       status: match.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED'
     };
@@ -286,12 +286,16 @@ export function MatchList({ matches, games, players, onUpdateMatch, onDeleteMatc
 
                         <div className="space-y-1">
                           {team.players.map((player) => {
-                            const playerStats = team.playerStats.find(ps => ps.playerId === player.id) || {
+                            if (!team.playerStats) {
+                              team.playerStats = [];
+                            }
+                            const playerStats: PlayerMatchStats = (team.playerStats?.find(ps => ps.playerId === player.id) || {
                               playerId: player.id,
                               goals: 0,
+                              assists: 0,
                               yellowCards: 0,
                               redCard: false
-                            };
+                            }) as PlayerMatchStats;
 
                             return (
                               <div key={player.id} className="flex items-center justify-between text-sm">
@@ -306,7 +310,7 @@ export function MatchList({ matches, games, players, onUpdateMatch, onDeleteMatc
                                     >
                                       +⚽️
                                     </button>
-                                    {playerStats.goals > 0 && (
+                                    {playerStats.goals! > 0 && (
                                       <button
                                         onClick={() => handlePlayerStats(match, teamIndex, player.id, 'goals', false)}
                                         className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
@@ -316,7 +320,7 @@ export function MatchList({ matches, games, players, onUpdateMatch, onDeleteMatc
                                       </button>
                                     )}
                                     <span className="text-xs font-medium">
-                                      {playerStats.goals || 0}
+                                      {playerStats.goals! || 0}
                                     </span>
                                     <button
                                       onClick={() => handlePlayerStats(match, teamIndex, player.id, 'yellowCards', true)}
@@ -353,9 +357,9 @@ export function MatchList({ matches, games, players, onUpdateMatch, onDeleteMatc
                                 )}
                                 {!isEditing && (
                                   <div className="flex items-center gap-2">
-                                    {playerStats.goals > 0 && (
+                                    {playerStats.goals! > 0 && (
                                       <span className="text-xs bg-green-50 text-green-800 px-2 py-1 rounded">
-                                        ⚽️ {playerStats.goals}
+                                        ⚽️ {playerStats.goals!}
                                       </span>
                                     )}
                                     {playerStats.yellowCards > 0 && (

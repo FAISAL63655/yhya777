@@ -85,6 +85,31 @@ const defaultPlayers: Player[] = Array.from({ length: 60 }, (_, index) => ({
   updatedAt: new Date().toISOString()
 }));
 
+// دالة لإنشاء فرق عشوائية
+function createRandomTeams(game: Game, allPlayers: Player[]): Team[] {
+  const availablePlayers = [...allPlayers];
+  const teams: Team[] = [];
+
+  for (let i = 0; i < game.maxTeams; i++) {
+    const teamPlayers: Player[] = [];
+    for (let j = 0; j < game.playersPerTeam; j++) {
+      if (availablePlayers.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availablePlayers.length);
+        const player = availablePlayers.splice(randomIndex, 1)[0];
+        teamPlayers.push(player);
+      }
+    }
+    teams.push({
+      id: `team-${i + 1}`,
+      name: `فريق ${i + 1}`,
+      players: teamPlayers,
+      score: Math.floor(Math.random() * 5),
+      playerStats: []
+    });
+  }
+  return teams;
+}
+
 // إنشاء مواجهات افتراضية
 const defaultMatches: Match[] = Array.from({ length: 30 }, (_, index) => ({
   id: `match-${index + 1}`,
@@ -118,6 +143,7 @@ defaultGames.forEach(game => {
       gameId: game.id,
       date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       teams,
       status: 'COMPLETED',
       round: Math.floor(i / 2) + 1 // كل جولة تحتوي على مباراتين
@@ -127,40 +153,16 @@ defaultGames.forEach(game => {
   }
 });
 
-function createRandomTeams(game: Game, allPlayers: Player[]): Team[] {
-  const qualifiedPlayers = allPlayers.filter(p => (p.ratings[game.type] || 0) > 0);
-  const shuffledPlayers = [...qualifiedPlayers].sort(() => Math.random() - 0.5);
-  const totalPlayersNeeded = game.playersPerTeam * 2;
-  const selectedPlayers = shuffledPlayers.slice(0, totalPlayersNeeded);
-
-  return [
-    {
-      id: `team-1-${Math.random()}`,
-      name: 'الفريق الأول',
-      players: selectedPlayers.slice(0, game.playersPerTeam),
-      score: Math.floor(Math.random() * 5),
-      playerStats: []
-    },
-    {
-      id: `team-2-${Math.random()}`,
-      name: 'الفريق الثاني',
-      players: selectedPlayers.slice(game.playersPerTeam),
-      score: Math.floor(Math.random() * 5),
-      playerStats: []
-    }
-  ];
-}
-
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedGame, setSelectedGame] = useState<Game | undefined>(undefined);
   const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [showGameForm, setShowGameForm] = useState(false);
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'games' | 'players' | 'matches' | 'statistics' | 'playerStats' | 'liveRanking'>('matches');
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -176,20 +178,26 @@ function App() {
         const storedPlayers = localStorage.getItem('yhya_league_players');
         const storedMatches = localStorage.getItem('yhya_league_matches');
 
-        if (storedGames) {
-          setGames(JSON.parse(storedGames));
-        }
-        if (storedPlayers) {
-          setPlayers(JSON.parse(storedPlayers));
-        }
-        if (storedMatches) {
-          setMatches(JSON.parse(storedMatches));
+        setGames(storedGames ? JSON.parse(storedGames) : defaultGames);
+        setPlayers(storedPlayers ? JSON.parse(storedPlayers) : defaultPlayers);
+        setMatches(storedMatches ? JSON.parse(storedMatches) : defaultMatches);
+
+        // استعادة التبويب المحدد
+        const savedTab = localStorage.getItem('selectedTab') as typeof selectedTab;
+        if (savedTab) {
+          setSelectedTab(savedTab);
         }
 
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading data:', error);
-        setError('حدث خطأ أثناء تحميل البيانات');
+        setError('حدث خطأ أثناء تحميل البيانات. تم تحميل البيانات الافتراضية.');
+        
+        // تحميل البيانات الافتراضية في حالة الخطأ
+        setGames(defaultGames);
+        setPlayers(defaultPlayers);
+        setMatches(defaultMatches);
+        
         setIsLoading(false);
       }
     };
@@ -207,27 +215,30 @@ function App() {
   }, [games, players, matches, isLoading]);
 
   const handleMatchSubmit = (matchData: Omit<Match, 'id'> | Omit<Match, 'id'>[]) => {
+    const timestamp = new Date().toISOString();
+    
     if (Array.isArray(matchData)) {
       // عند إنشاء مجموعة من المواجهات
       const newMatches = matchData.map((match, index) => ({
         ...match,
         id: `match-${Date.now()}-${index}`,
-        createdAt: new Date().toISOString(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
         round: getNextRoundNumber(match.gameId)
       }));
       setMatches([...matches, ...newMatches]);
-      setShowMatchForm(false);
     } else {
       // عند إنشاء مواجهة واحدة
       const newMatch = {
         ...matchData,
         id: `match-${Date.now()}`,
-        createdAt: new Date().toISOString(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
         round: getNextRoundNumber(matchData.gameId)
       };
       setMatches([...matches, newMatch]);
-      setShowMatchForm(false);
     }
+    setShowMatchForm(false);
   };
 
   // دالة للحصول على رقم الجولة التالية للعبة معينة
@@ -241,10 +252,22 @@ function App() {
 
   // دالة لحذف المواجهة مع تحديث localStorage
   const handleDeleteMatch = (matchId: string) => {
+    const matchToDelete = matches.find(m => m.id === matchId);
+    if (!matchToDelete) {
+      console.error('المواجهة غير موجودة');
+      return;
+    }
+
+    // التحقق من صلاحيات المستخدم لحذف المواجهة
+    const matchGame = games.find(g => g.id === matchToDelete.gameId);
+    if (!matchGame || !canEditMatches(matchGame.type)) {
+      console.error('ليس لديك صلاحية لحذف هذه المواجهة');
+      return;
+    }
+
     if (window.confirm('هل أنت متأكد من حذف هذه المواجهة؟')) {
       const updatedMatches = matches.filter(m => m.id !== matchId);
       setMatches(updatedMatches);
-      localStorage.setItem('yhya_league_matches', JSON.stringify(updatedMatches));
     }
   };
 
@@ -526,6 +549,7 @@ function App() {
             matches={matches}
             games={games}
             players={players}
+            selectedGame={selectedGame ?? null}
             isFullScreen={isFullScreen}
             onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
           />
@@ -543,7 +567,7 @@ function App() {
                 const updatedPlayer: Player = {
                   ...playerData,
                   id: selectedPlayer.id,
-                  updatedAt: new Date(),
+                  updatedAt: new Date().toISOString(),
                   createdAt: selectedPlayer.createdAt
                 };
                 setPlayers(prevPlayers => 
@@ -554,13 +578,13 @@ function App() {
                 const newPlayer: Player = {
                   ...playerData,
                   id: crypto.randomUUID(),
-                  createdAt: new Date(),
-                  updatedAt: new Date()
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
                 };
                 setPlayers(prevPlayers => [...prevPlayers, newPlayer]);
               }
               setShowPlayerForm(false);
-              setSelectedPlayer(null);
+              setSelectedPlayer(undefined);
             } catch (error) {
               console.error('Error saving player:', error);
               alert('حدث خطأ أثناء حفظ بيانات اللاعب');
@@ -568,7 +592,7 @@ function App() {
           }}
           onCancel={() => {
             setShowPlayerForm(false);
-            setSelectedPlayer(null);
+            setSelectedPlayer(undefined);
           }}
         />
       )}
@@ -581,14 +605,14 @@ function App() {
           onSubmit={handleMatchSubmit}
           onClose={() => {
             setShowMatchForm(false);
-            setSelectedGame(null);
+            setSelectedGame(undefined);
           }}
         />
       )}
 
       {showGameForm && (
         <GameForm
-          game={selectedGame}
+          game={selectedGame || undefined}
           onSubmit={(gameData) => {
             if (selectedGame) {
               // تحديث لعبة موجودة
@@ -605,11 +629,11 @@ function App() {
               };
               setGames([...games, newGame]);
             }
-            setSelectedGame(null);
+            setSelectedGame(undefined);
             setShowGameForm(false);
           }}
           onClose={() => {
-            setSelectedGame(null);
+            setSelectedGame(undefined);
             setShowGameForm(false);
           }}
         />

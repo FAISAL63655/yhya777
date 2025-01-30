@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Game, Player, Match, Team, PlayerStats } from '../types';
+import { Game, Player, Match, Team, PlayerMatchStats, GameType } from '../types';
 import { X, Users, Trophy, Shuffle, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface MatchFormProps {
@@ -17,7 +17,7 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
       name: `فريق ${index + 1}`,
       players: [] as Player[],
       score: 0,
-      playerStats: [] as PlayerStats[]
+      playerStats: [] as PlayerMatchStats[]
     }));
     return initialTeams;
   });
@@ -27,11 +27,11 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
   );
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const [proposedMatches, setProposedMatches] = useState<Array<{teams: Team[]}>>([]);
+  const [proposedMatches, setProposedMatches] = useState<Array<Omit<Match, 'id'>>>([]);
   const [showPreview, setShowPreview] = useState(false);
 
   // دالة لحساب قوة الفريق
-  const calculateTeamStrength = (players: Player[], gameType: string): number => {
+  const calculateTeamStrength = (players: Player[], gameType: GameType): number => {
     return players.reduce((sum, player) => sum + (player.ratings[gameType] || 0), 0);
   };
 
@@ -150,6 +150,9 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
         if (bestPlayerIndex !== -1) {
           const player = playersInLevel[bestPlayerIndex];
           team.players.push(player);
+          if (!team.playerStats) {
+            team.playerStats = [];
+          }
           team.playerStats.push({
             playerId: player.id,
             goals: 0,
@@ -173,9 +176,15 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
         while (team.players.length < playersPerTeam && extraTeams.length > 0) {
           const sourceTeam = extraTeams[0];
           if (sourceTeam.players.length > playersPerTeam) {
+            if (!sourceTeam.playerStats) {
+              sourceTeam.playerStats = [];
+            }
             const player = sourceTeam.players.pop()!;
             const playerStat = sourceTeam.playerStats.pop()!;
             team.players.push(player);
+            if (!team.playerStats) {
+              team.playerStats = [];
+            }
             team.playerStats.push(playerStat);
           } else {
             extraTeams.shift();
@@ -223,11 +232,17 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
     const balancedTeams = createBalancedTeams(qualifiedPlayers, round, existingMatches);
 
     // تقسيم الفرق إلى مواجهات متكافئة
-    const proposedMatchList: Array<{teams: Team[]}> = [];
+    const proposedMatchList: Array<Omit<Match, 'id'>> = [];
     for (let i = 0; i < balancedTeams.length; i += 2) {
       if (i + 1 < balancedTeams.length) {
         proposedMatchList.push({
-          teams: [balancedTeams[i], balancedTeams[i + 1]]
+          gameId: game.id,
+          date,
+          teams: [balancedTeams[i], balancedTeams[i + 1]],
+          status: 'PENDING',
+          round,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
       }
     }
@@ -262,12 +277,9 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
 
     // إنشاء مصفوفة من المباريات الجديدة
     const newMatches = proposedMatches.map(match => ({
-      gameId: game.id,
-      date,
+      ...match,
       createdAt: new Date().toISOString(),
-      teams: match.teams,
-      status: 'PENDING',
-      round
+      updatedAt: new Date().toISOString()
     }));
 
     // إرسال جميع المباريات مرة واحدة
@@ -314,9 +326,11 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
         return {
           ...team,
           players: updatedPlayers,
-          playerStats: [...team.playerStats, {
+          playerStats: [...(team.playerStats || []), {
             playerId: player.id,
-            goals: 0
+            goals: 0,
+            yellowCards: 0,
+            redCard: false
           }]
         };
       }
@@ -359,15 +373,15 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
   const [team2Score, setTeam2Score] = useState<number>(0);
 
   const handleSubmit = () => {
-    const matchData: Omit<Match, 'id' | 'createdAt' | 'updatedAt'> = {
-      gameId: game.id,
-      teams: teams,
-      status: 'PENDING',
-      round: 1,
-      date: date
-    };
+    const currentTime = new Date().toISOString();
+    const newMatches = proposedMatches.map(match => ({
+      ...match,
+      createdAt: currentTime,
+      updatedAt: currentTime
+    }));
 
-    onSubmit(matchData);
+    // إرسال جميع المباريات مرة واحدة
+    onSubmit(newMatches);
   };
 
   const qualifiedPlayersCount = players.filter(p => (p.ratings[game.type] || 0) > 0).length;
@@ -492,7 +506,7 @@ export function MatchForm({ game, players, matches, onSubmit, onClose }: MatchFo
                     className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <CheckCircle className="w-5 h-5" />
-                    اعتماد المواجهات
+                    تأكيد المباريات
                   </button>
                 </div>
               </div>
